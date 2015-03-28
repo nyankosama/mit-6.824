@@ -34,7 +34,13 @@ public class ResultSet<T, E> {
         return error;
     }
 
-    public void handleError(ErrorProcess<E> proc) {
+    /**
+     * 传入lambda函数处理错误
+     * @param proc
+     * @return 返回是否运行错误处理，如果未运行则代表上一次调用成功
+     */
+    public boolean handleError(ErrorProcess<E> proc) {
         if (!isSucceed) proc.process(error);
+        return !isSucceed;
     }
 }
