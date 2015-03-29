@@ -1,4 +1,4 @@
-package com.nyankosama.mit.base;
+package com.nyankosama.base;
 
 /**
  * @created: 2015/3/28

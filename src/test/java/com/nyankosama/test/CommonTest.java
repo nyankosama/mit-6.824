@@ -1,6 +1,6 @@
 package com.nyankosama.test;
 
-import com.nyankosama.mit.base.ResultSet;
+import com.nyankosama.base.ResultSet;
 
 /**
  * @created: 2015/3/28

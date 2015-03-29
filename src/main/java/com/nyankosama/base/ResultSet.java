@@ -1,11 +1,14 @@
-package com.nyankosama.mit.base;
+package com.nyankosama.base;
+
+import java.io.Serializable;
 
 /**
  * @created: 2015/3/28
  * @author: nyankosama
  * @description: 替代掉checked-exception，本项目尽量不使用checked-exception
  */
-public class ResultSet<T, E> {
+public class ResultSet<T, E> implements Serializable{
+    private static final long serialVersionUID = 5617363210683577733L;
     private T result;
     private boolean isSucceed;
     private E error;
