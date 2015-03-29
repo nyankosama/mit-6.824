@@ -16,7 +16,6 @@ import org.apache.logging.log4j.Logger;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.net.Socket;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -31,7 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RpcClient {
     private static Logger logger = LogManager.getLogger(RpcClient.class);
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
-    private Socket socket;
     private Map<Long, BlockingQueue<ResultSet>> threadSynMap = new ConcurrentHashMap<>();
     private Channel channel;
     private ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
@@ -52,8 +50,8 @@ public class RpcClient {
             @Override
             public void initChannel(SocketChannel ch) throws Exception {
                 ch.pipeline().addLast(
-                        new ObjectEncoder(),
-                        new ObjectDecoder(1048576, ClassResolvers.cacheDisabled(null)),
+                        new KryoEncoder(),
+                        new KryoDecoder(),
                         new RpcClientHandler()
                 );
             }

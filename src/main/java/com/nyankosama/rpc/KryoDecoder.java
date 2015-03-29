@@ -5,8 +5,7 @@ import com.esotericsoftware.kryo.io.Input;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.serialization.ClassResolver;
-import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -15,7 +14,7 @@ import org.apache.logging.log4j.Logger;
  * @author: nyankosama
  * @description:
  */
-public class KryoDecoder extends ObjectDecoder{
+public class KryoDecoder extends LengthFieldBasedFrameDecoder {
     private static Logger logger = LogManager.getLogger(KryoDecoder.class);
     private final ThreadLocal<Kryo> kryoLocalPool = new ThreadLocal<Kryo>(){
         @Override
@@ -24,19 +23,14 @@ public class KryoDecoder extends ObjectDecoder{
         }
     };
 
-    private String name;
-
-    public KryoDecoder(String name, int maxObjectSize, ClassResolver classResolver) {
-        super(maxObjectSize, classResolver);
-        this.name = name;
+    public KryoDecoder() {
+        super(1048576, 0, 4, 0, 4);
     }
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
-        logger.trace("decoder:" + name + " called");
         ByteBuf frame = (ByteBuf) super.decode(ctx, in);
         if (frame == null) {
-            logger.error("decoder:" + name + " frame is null");
             return null;
         }
         Kryo kryo = kryoLocalPool.get();

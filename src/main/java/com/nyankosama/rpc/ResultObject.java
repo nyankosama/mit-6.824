@@ -14,6 +14,8 @@ public class ResultObject implements Serializable{
     long threadId;
     ResultSet resultSet;
 
+    public ResultObject(){}
+
     public ResultObject(long threadId, ResultSet resultSet) {
         this.threadId = threadId;
         this.resultSet = resultSet;

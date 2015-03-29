@@ -48,8 +48,8 @@ public class RpcServer {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline().addLast(
-                                    new ObjectEncoder(),
-                                    new ObjectDecoder(1048576, ClassResolvers.cacheDisabled(null)),
+                                    new KryoEncoder(),
+                                    new KryoDecoder(),
                                     new RpcServerHandler()
                             );
                         }

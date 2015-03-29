@@ -16,6 +16,8 @@ public class CallObject implements Serializable{
     Class<?>[] parameterTypes;
     Object[] arguments;
 
+    public CallObject() {}
+
     public CallObject(long threadId, String interfaceName, String methodName, Class<?>[] parameterTypes, Object[] arguments) {
         this.threadId = threadId;
         this.interfaceName = interfaceName;

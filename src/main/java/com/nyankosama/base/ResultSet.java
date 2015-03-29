@@ -13,6 +13,7 @@ public class ResultSet<T, E> implements Serializable{
     private boolean isSucceed;
     private E error;
 
+    public ResultSet(){}
 
     public ResultSet(T result) {
         this.result = result;
