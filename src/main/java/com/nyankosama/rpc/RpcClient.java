@@ -1,15 +1,11 @@
 package com.nyankosama.rpc;
 
-import com.esotericsoftware.kryo.Kryo;
 import com.nyankosama.base.ResultSet;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -29,15 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("unchecked")
 public class RpcClient {
     private static Logger logger = LogManager.getLogger(RpcClient.class);
-    private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
     private Map<Long, BlockingQueue<ResultSet>> threadSynMap = new ConcurrentHashMap<>();
     private Channel channel;
-    private ThreadLocal<Kryo> kryoThreadLocal = new ThreadLocal<Kryo>() {
-        @Override
-        protected Kryo initialValue() {
-            return new Kryo();
-        }
-    };
 
     public RpcClient(String ip, int port) {
         //TODO 参数错误处理
@@ -76,11 +65,6 @@ public class RpcClient {
     private class RpcClientHandler extends ChannelHandlerAdapter {
         private Logger logger = LogManager.getLogger(RpcInvocationHandler.class);
 
-        @Override
-        public void channelActive(ChannelHandlerContext ctx) throws Exception {
-//            ctx.writeAndFlush("fuck");
-        }
-
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (!(msg instanceof ResultObject)) {
                 logger.error("handler cannot handle msg whose type is not ResultObject");
@@ -104,7 +88,6 @@ public class RpcClient {
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-//            channel.writeAndFlush(new ResultObject(1, new ResultSet(null, false, null)));
             logger.trace("invocation handler invoked");
             long threadId = Thread.currentThread().getId();
             threadSynMap.putIfAbsent(threadId, new ArrayBlockingQueue<>(1));
@@ -115,7 +98,6 @@ public class RpcClient {
                     method.getParameterTypes(),
                     args);
             channel.writeAndFlush(callObject);
-//            channel.writeAndFlush("fuck");
             logger.trace("client proxy write and flush:" + callObject);
             return threadSynMap.get(threadId).take();
         }
