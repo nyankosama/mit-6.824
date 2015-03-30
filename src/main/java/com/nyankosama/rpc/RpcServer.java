@@ -6,6 +6,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -70,11 +71,6 @@ public class RpcServer {
 
     private class RpcServerHandler extends ChannelHandlerAdapter {
         private Logger logger = LogManager.getLogger(RpcServerHandler.class);
-
-        @Override
-        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
-            logger.trace("client connection received");
-        }
 
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             logger.trace("server handler object received:" + msg);

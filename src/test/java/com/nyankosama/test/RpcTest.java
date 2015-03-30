@@ -34,6 +34,13 @@ public class RpcTest {
         }.start();
         RpcClient client = new RpcClient("127.0.0.1", 9123);
         Hello hello = client.refer(Hello.class);
-        System.out.println(hello.sayHi("nyankosama").get());
+
+        int total = 10000;
+        long begin = System.currentTimeMillis();
+        for (int i = 0; i < total; i++) {
+            hello.sayHi("hlr");
+        }
+        long end = System.currentTimeMillis();
+        System.out.printf("cost: %dms, qps: %f \n", (end - begin), (double)total / (end - begin) * 1000);
     }
 }

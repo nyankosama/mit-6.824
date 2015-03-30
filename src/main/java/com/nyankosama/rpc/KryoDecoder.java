@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -36,6 +37,8 @@ public class KryoDecoder extends LengthFieldBasedFrameDecoder {
         Kryo kryo = kryoLocalPool.get();
         try (Input input = new Input(new ByteBufInputStream(frame))) {
             return kryo.readClassAndObject(input);
+        } finally {
+            ReferenceCountUtil.release(frame);
         }
     }
 }
