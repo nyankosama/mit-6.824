@@ -31,6 +31,7 @@ public class RpcClient {
 
     public RpcClient(String ip, int port) {
         //TODO 参数错误处理
+        //TODO 一个RpcClient实例需要能够同时处理多个不同的ip:port的远程对象
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap b = new Bootstrap();
         b.group(workerGroup)
