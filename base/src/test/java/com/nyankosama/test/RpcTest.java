@@ -40,7 +40,7 @@ public class RpcTest {
     public void benchmark() {
         RpcServer server = new RpcServer("127.0.0.1", 9123);
         server.regiester(new HelloImpl());
-        new Thread(){
+        new Thread() {
             @Override
             public void run() {
                 server.start();
@@ -55,7 +55,7 @@ public class RpcTest {
             hello.sayHi("hlr");
         }
         long end = System.currentTimeMillis();
-        System.out.printf("cost: %dms, qps: %f \n", (end - begin), (double)total / (end - begin) * 1000);
+        System.out.printf("cost: %dms, qps: %f \n", (end - begin), (double) total / (end - begin) * 1000);
     }
 
     @Test
