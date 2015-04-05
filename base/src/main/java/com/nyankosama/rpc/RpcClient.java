@@ -6,7 +6,6 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.util.ReferenceCountUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -14,9 +13,9 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.TransferQueue;
 
 /**
  * @created: 2015/3/29
@@ -26,11 +25,12 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("unchecked")
 public class RpcClient {
     private static Logger logger = LogManager.getLogger(RpcClient.class);
-    private Map<Long, BlockingQueue<ResultSet>> threadSynMap = new ConcurrentHashMap<>();
+    private Map<Long, TransferQueue<ResultSet>> threadSynMap = new ConcurrentHashMap<>();
     private Channel channel;
 
     public RpcClient(String ip, int port) {
         //TODO 参数错误处理
+        //TODO 一个RpcClient实例需要能够同时处理多个不同的ip:port的远程对象
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         Bootstrap b = new Bootstrap();
         b.group(workerGroup)
@@ -91,7 +91,7 @@ public class RpcClient {
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             logger.trace("invocation handler invoked");
             long threadId = Thread.currentThread().getId();
-            threadSynMap.putIfAbsent(threadId, new ArrayBlockingQueue<>(1));
+            threadSynMap.putIfAbsent(threadId, new LinkedTransferQueue<>());
             CallObject callObject = new CallObject(
                     threadId,
                     interfaceName,

@@ -5,6 +5,7 @@ package com.nyankosama.base;
  * @author: nyankosama
  * @description:
  */
+@FunctionalInterface
 public interface ErrorProcess<E> {
-    public void process(E e);
+    public abstract void process(E e);
 }
