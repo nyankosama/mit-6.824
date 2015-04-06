@@ -3,6 +3,7 @@ package main
 import "os"
 import "fmt"
 import "strings"
+import "strconv"
 import "../mapreduce"
 
 import "container/list"
@@ -29,7 +30,11 @@ func Map(value string) *list.List {
 // of that key's string value. should return a single
 // output value for that key.
 func Reduce(key string, values *list.List) string {
-	return "123"
+	count := 0
+	for e := values.Front(); e != nil; e = e.Next() {
+		count++
+	}
+	return strconv.Itoa(count)
 }
 
 // Can be run in 3 ways:
