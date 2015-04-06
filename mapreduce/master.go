@@ -3,12 +3,10 @@ package mapreduce
 import "container/list"
 import "fmt"
 
-
 type WorkerInfo struct {
 	address string
 	// You can add definitions here.
 }
-
 
 // Clean up all workers by sending a Shutdown RPC to each one of them Collect
 // the number of jobs each work has performed.
@@ -28,6 +26,7 @@ func (mr *MapReduce) KillWorkers() *list.List {
 	return l
 }
 
+//start master
 func (mr *MapReduce) RunMaster() *list.List {
 	// Your code here
 	return mr.KillWorkers()
