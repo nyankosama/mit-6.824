@@ -54,14 +54,14 @@ type MapReduce struct {
 	nReduce         int    // Number of Reduce jobs
 	file            string // Name of input file
 	MasterAddress   string
-	registerChannel chan string
-	DoneChannel     chan bool
+	registerChannel chan string //当worker初始化之后，把其对应的ip地址加入到这个channel中
+	DoneChannel     chan bool   //true if mapreduce has finished
 	alive           bool
 	l               net.Listener
 	stats           *list.List
 
 	// Map of registered workers that you need to keep up to date
-	Workers map[string]*WorkerInfo
+	Workers map[string]*WorkerInfo //worker address -> WorkerInfo
 
 	// add any additional state here
 }
@@ -74,8 +74,9 @@ func InitMapReduce(nmap int, nreduce int,
 	mr.file = file
 	mr.MasterAddress = master
 	mr.alive = true
-	mr.registerChannel = make(chan string)
+	mr.registerChannel = make(chan string, MAX_WORKERS)
 	mr.DoneChannel = make(chan bool)
+	mr.Workers = make(map[string]*WorkerInfo)
 
 	// initialize any additional state here
 	return mr
@@ -91,7 +92,8 @@ func MakeMapReduce(nmap int, nreduce int,
 
 func (mr *MapReduce) Register(args *RegisterArgs, res *RegisterReply) error {
 	DPrintf("Register: worker %s\n", args.Worker)
-	mr.registerChannel <- args.Worker
+	mr.Workers[args.Worker] = &WorkerInfo{args.Worker}
+	mr.registerChannel <- args.Worker //worker的地址
 	res.OK = true
 	return nil
 }

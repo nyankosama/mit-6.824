@@ -1,11 +1,23 @@
+/*=============================================================================
+#
+# Author: Nyankosama email:i@nyankosama.com
+#
+# Last modified:	2015-04-12 23:01
+#
+# Filename:		common.go
+#
+# Description:
+#
+=============================================================================*/
 package mapreduce
 
 import "fmt"
 import "net/rpc"
 
 const (
-	Map    = "Map"
-	Reduce = "Reduce"
+	Map         = "Map"
+	Reduce      = "Reduce"
+	MAX_WORKERS = 100
 )
 
 type JobType string
