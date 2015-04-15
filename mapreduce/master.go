@@ -30,16 +30,11 @@ func (mr *MapReduce) KillWorkers() *list.List {
 
 //start master
 func (mr *MapReduce) RunMaster() *list.List {
-	//* 等待新的空闲Worker注册到Master
-	//* 一旦有空闲的Worker就分配map任务给这些Worker
-	//* 等待map任务结束
-	//* 一旦有空闲的Worker就分配reduce任务给这些Worker
-	//* 等待reduce任务结束
-
-	countDown := make(chan int)
-	jobQueue := make(chan *DoJobArgs, mr.nMap+mr.nReduce)
+	countDown := make(chan int)                           //用作计数已完成了多少Map和Reduce job
+	jobQueue := make(chan *DoJobArgs, mr.nMap+mr.nReduce) //把所有待做的job和错误处理的job都放进来
 
 	go func() {
+		//该routine负责取jobQueue中的job来做
 		for {
 			args := <-jobQueue
 			worker := <-mr.registerChannel
