@@ -37,45 +37,46 @@ func (mr *MapReduce) RunMaster() *list.List {
 	//* 等待reduce任务结束
 
 	countDown := make(chan int)
+	jobQueue := make(chan *DoJobArgs, mr.nMap+mr.nReduce)
+
+	go func() {
+		for {
+			args := <-jobQueue
+			worker := <-mr.registerChannel
+			DPrintf("processing map worker, map job number:%d \n", args.JobNumber)
+			go func(worker string, doJobArgs *DoJobArgs) {
+				var doJobReply DoJobReply
+				success := call(worker, "Worker.DoJob", doJobArgs, &doJobReply)
+				if !success {
+					jobQueue <- doJobArgs
+					DPrintf("worker: %s fails, JobNumber: %d redo", worker, doJobArgs.JobNumber)
+				} else {
+					DPrintf("map job number: %d call return \n", args.JobNumber)
+					mr.registerChannel <- worker
+					countDown <- 1
+					DPrintf("map job number: %d write countDownChan \n", args.JobNumber)
+
+				}
+			}(worker, args)
+
+		}
+	}()
+
 	for m := 0; m < mr.nMap; m++ {
-		worker := <-mr.registerChannel
-		DPrintf("processing map worker, map job number:%d \n", m)
-		go callRpcMap(worker, mr, m, countDown)
+		jobQueue <- &DoJobArgs{mr.file, Map, m, mr.nReduce}
 	}
 
 	DPrintf("waiting for map stage")
 	waitForNum(countDown, mr.nMap)
 
 	for r := 0; r < mr.nReduce; r++ {
-		worker := <-mr.registerChannel
-		DPrintf("processing reduce worker, map job number:%d \n", r)
-		go callRpcReduce(worker, mr, r, countDown)
+		jobQueue <- &DoJobArgs{mr.file, Reduce, r, mr.nMap}
 	}
 
 	DPrintf("waiting for reduce stage")
 	waitForNum(countDown, mr.nReduce)
 
 	return mr.KillWorkers()
-}
-
-func callRpcMap(worker string, mr *MapReduce, JobNumber int, countDown chan int) {
-	doJobArgs := &DoJobArgs{mr.file, Map, JobNumber, mr.nReduce}
-	var doJobReply DoJobReply
-	call(worker, "Worker.DoJob", doJobArgs, &doJobReply)
-	DPrintf("map job number: %d call return \n", JobNumber)
-	mr.registerChannel <- worker
-	countDown <- 1
-	DPrintf("map job number: %d write countDownChan \n", JobNumber)
-	//TODO 暂时忽略reply，这里需要处理各种异常情况
-}
-
-func callRpcReduce(worker string, mr *MapReduce, JobNumber int, countDown chan int) {
-	doJobArgs := &DoJobArgs{mr.file, Reduce, JobNumber, mr.nMap}
-	var doJobReply DoJobReply
-	call(worker, "Worker.DoJob", doJobArgs, &doJobReply)
-	mr.registerChannel <- worker
-	countDown <- 1
-	//TODO 暂时忽略reply，这里需要处理各种异常情况
 }
 
 func waitForNum(countDownChan chan int, num int) {
