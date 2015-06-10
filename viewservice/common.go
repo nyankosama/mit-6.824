@@ -35,7 +35,7 @@ import "time"
 
 type View struct {
 	Viewnum uint
-	Primary string
+	Primary string //"ip:port"
 	Backup  string
 }
 
