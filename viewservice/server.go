@@ -7,7 +7,19 @@ import "time"
 import "sync"
 import "fmt"
 import "os"
+import "container/list"
 import "sync/atomic"
+
+type PingServer struct {
+	addr       string
+	timeOutNum int32
+}
+
+func NewPingServer(addr string, timeOutNum int32) *PingServer {
+	ps := new(PingServer)
+	ps.addr = addr
+	ps.timeOutNum = timeOutNum
+}
 
 type ViewServer struct {
 	mu       sync.Mutex
@@ -16,17 +28,36 @@ type ViewServer struct {
 	rpccount int32 // for testing
 	me       string
 
-
 	// Your declarations here.
+	currentView *View //copy on write
+	primary     *PingServer
+	backup      *PingServer
+	idleServers *list.List //other idle server addr
 }
 
 //
 // server Ping RPC handler.
 //
 func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
-
-	// Your code here.
-
+	vs.mu.Lock()
+	defer vs.mu.Unlock()
+	//判断是否viewservice在初始状态
+	vn := vs.currentView.Viewnum
+	if vn == 0 {
+		vs.currentView = NewView(vn+1, args.Me, "")
+		vs.primary = NewPingServer(args.Me, 0)
+	} else {
+		//非初始状态
+		//如果没有backup
+		if vs.currentView.Backup == "" {
+			vs.currentView = NewView(vn+1, vs.currentView.Primary, args.Me)
+			vs.backup = NewPingServer(args.Me, 0)
+		} else {
+			//有back，直接放到idleServers里面
+			vs.idleServers.PushBack(NewPingServer(args.Me, 0))
+		}
+	}
+	reply.View = *vs.currentView
 	return nil
 }
 
@@ -34,12 +65,9 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 // server Get() RPC handler.
 //
 func (vs *ViewServer) Get(args *GetArgs, reply *GetReply) error {
-
-	// Your code here.
-
+	reply.View = &vs.currentView
 	return nil
 }
-
 
 //
 // tick() is called once per PingInterval; it should notice
@@ -47,8 +75,7 @@ func (vs *ViewServer) Get(args *GetArgs, reply *GetReply) error {
 // accordingly.
 //
 func (vs *ViewServer) tick() {
-
-	// Your code here.
+	//TODO
 }
 
 //
@@ -77,6 +104,8 @@ func StartServer(me string) *ViewServer {
 	vs := new(ViewServer)
 	vs.me = me
 	// Your vs.* initializations here.
+	vs.currentView = NewView(0, "", "")
+	vs.idleServers = list.New()
 
 	// tell net/rpc about our RPC server and handlers.
 	rpcs := rpc.NewServer()

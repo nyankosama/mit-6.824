@@ -39,6 +39,14 @@ type View struct {
 	Backup  string
 }
 
+func NewView(viewnum int, primary, backup string) *View {
+	v := new(View)
+	v.Viewnum = viewnum
+	v.Primary = primary
+	v.Backup = backup
+	return v
+}
+
 // clients should send a Ping RPC this often,
 // to tell the viewservice that the client is alive.
 const PingInterval = time.Millisecond * 100
