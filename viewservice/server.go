@@ -15,10 +15,15 @@ type PingServer struct {
 	timeOutNum int32
 }
 
+func (ps *PingServer) addTick() {
+	atomic.AddInt32(&ps.timeOutNum, 1)
+}
+
 func NewPingServer(addr string, timeOutNum int32) *PingServer {
 	ps := new(PingServer)
 	ps.addr = addr
 	ps.timeOutNum = timeOutNum
+	return ps
 }
 
 type ViewServer struct {
@@ -43,7 +48,7 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 	defer vs.mu.Unlock()
 	//判断是否viewservice在初始状态
 	vn := vs.currentView.Viewnum
-	if vn == 0 {
+	if vs.currentView.Primary == "" && vs.currentView.Backup == "" {
 		vs.currentView = NewView(vn+1, args.Me, "")
 		vs.primary = NewPingServer(args.Me, 0)
 	} else {
@@ -65,7 +70,7 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 // server Get() RPC handler.
 //
 func (vs *ViewServer) Get(args *GetArgs, reply *GetReply) error {
-	reply.View = &vs.currentView
+	reply.View = *vs.currentView
 	return nil
 }
 
@@ -75,7 +80,49 @@ func (vs *ViewServer) Get(args *GetArgs, reply *GetReply) error {
 // accordingly.
 //
 func (vs *ViewServer) tick() {
-	//TODO
+	//增加记数
+	vs.mu.Lock()
+	defer vs.mu.Unlock()
+	if vs.primary != nil {
+		vs.primary.addTick()
+	}
+	if vs.backup != nil {
+		vs.backup.addTick()
+	}
+	for iter := vs.idleServers.Front(); iter != nil; iter = iter.Next() {
+		iter.Value.(*PingServer).addTick()
+	}
+	//处理tick数达到上限的server
+	vn := vs.currentView.Viewnum
+	if vs.primary != nil && vs.primary.timeOutNum == DeadPings {
+		if vs.currentView.Backup != "" {
+			if vs.idleServers.Len() != 0 {
+				ids := vs.idleServers.Front().Value.(*PingServer)
+				vs.idleServers.Remove(vs.idleServers.Front())
+				vs.currentView = NewView(vn+1, vs.currentView.Backup, ids.addr)
+			} else {
+				vs.currentView = NewView(vn+1, vs.currentView.Backup, "")
+			}
+
+		} else {
+			vs.currentView = NewView(vn+1, "", "")
+		}
+	}
+	if vs.backup != nil && vs.backup.timeOutNum == DeadPings {
+		if vs.idleServers.Len() != 0 {
+			ids := vs.idleServers.Front().Value.(*PingServer)
+			vs.idleServers.Remove(vs.idleServers.Front())
+			vs.currentView = NewView(vn+1, vs.currentView.Primary, ids.addr)
+		} else {
+			vs.currentView = NewView(vn+1, vs.currentView.Primary, "")
+		}
+	}
+	for iter := vs.idleServers.Front(); iter != nil; iter = iter.Next() {
+		//FIXME 直接使用iter进行remove
+		if iter.Value.(*PingServer).timeOutNum == DeadPings {
+			vs.idleServers.Remove(iter)
+		}
+	}
 }
 
 //

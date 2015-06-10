@@ -39,7 +39,7 @@ type View struct {
 	Backup  string
 }
 
-func NewView(viewnum int, primary, backup string) *View {
+func NewView(viewnum uint, primary, backup string) *View {
 	v := new(View)
 	v.Viewnum = viewnum
 	v.Primary = primary
