@@ -130,9 +130,12 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 			}
 		}
 	} else {
-		//VS_PRIACK_RECEIVED状态下分为2种情况，即
+		//VS_PRIACK_RECEIVED状态下分为几种情况，即
 		//(1,0)0
 		//(1,1)*
+		//(d,0)*
+		//(d,1)*
+		//(1,d)*
 		log.Println("viewservice VS_PRIACK_RECEIVED status")
 		if !vs.contains(args.Me) {
 			if vs.currentView.Backup == "" {
@@ -144,6 +147,32 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 				//有back，直接放到idleServers里面
 				ps := NewPingServer(args.Me, 0)
 				vs.idleServersMap[args.Me] = ps
+			}
+		} else if args.Viewnum == 0 {
+			//restarted server
+			if vs.hasPrimary(args.Me) && vs.backup != nil {
+				log.Println("primary fail:" + vs.primary.addr + ", currentView:" + vs.currentView.String())
+				if len(vs.idleServersMap) != 0 {
+					ids := mapGetRandomVal(vs.idleServersMap)
+					vs.currentView = NewView(vn+1, vs.backup.addr, ids.addr)
+					vs.primary = vs.backup
+					vs.backup = ids
+				} else {
+					vs.currentView = NewView(vn+1, vs.backup.addr, "")
+					vs.primary = vs.backup
+					vs.backup = nil
+				}
+				vs.status = VS_PRIACK_WAIT
+			} else if vs.hasBackup(args.Me) {
+				log.Println("backup fail:" + vs.backup.addr + ", currentView:" + vs.currentView.String())
+				if len(vs.idleServersMap) != 0 {
+					ids := mapGetRandomVal(vs.idleServersMap)
+					vs.currentView = NewView(vn+1, vs.primary.addr, ids.addr)
+					vs.backup = ids
+				} else {
+					vs.currentView = NewView(vn+1, vs.primary.addr, "")
+					vs.backup = nil
+				}
 			}
 		}
 	}
