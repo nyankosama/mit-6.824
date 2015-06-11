@@ -6,6 +6,7 @@ import "log"
 import "time"
 import "sync"
 import "fmt"
+import "strconv"
 import "os"
 import "container/list"
 import "sync/atomic"
@@ -26,6 +27,13 @@ func NewPingServer(addr string, timeOutNum int32) *PingServer {
 	return ps
 }
 
+//viewservice 的状态
+const {
+	VS_NO_PRI = 0
+	VS_PRIACK_WAIT = 1
+	VS_PRIACK_RECEIVED = 2
+}
+
 type ViewServer struct {
 	mu       sync.Mutex
 	l        net.Listener
@@ -36,32 +44,45 @@ type ViewServer struct {
 	// Your declarations here.
 	currentView *View //copy on write
 	primary     *PingServer
+	status      int
 	backup      *PingServer
 	idleServers *list.List //other idle server addr
 }
 
 //
 // server Ping RPC handler.
+//可能的状态有
+// * (0,0)0 初始态或者所有服务都失效
+// * (1,0)0 只有primary 没有backup
+// * (1,1)0 有primary和backup没有idleserver
+// * (1,1)1 有primary和backup以及idleserver
 //
 func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
+	log.Println("received:" + args.Me + ", vn=" + strconv.Itoa(int(args.Viewnum)))
+	log.Println(test)
 	vs.mu.Lock()
 	defer vs.mu.Unlock()
 	//判断是否viewservice在初始状态
 	vn := vs.currentView.Viewnum
 	if vs.currentView.Primary == "" && vs.currentView.Backup == "" {
+		log.Println("viewservice init status")
 		vs.currentView = NewView(vn+1, args.Me, "")
 		vs.primary = NewPingServer(args.Me, 0)
 	} else {
 		//非初始状态
 		//如果没有backup
+		//TODO 状态变化
 		if vs.currentView.Backup == "" {
+			log.Println("viewservice init backup")
 			vs.currentView = NewView(vn+1, vs.currentView.Primary, args.Me)
 			vs.backup = NewPingServer(args.Me, 0)
 		} else {
+			log.Println("viewservice init idleServers")
 			//有back，直接放到idleServers里面
 			vs.idleServers.PushBack(NewPingServer(args.Me, 0))
 		}
 	}
+	log.Println("currentView:" + vs.currentView.String())
 	reply.View = *vs.currentView
 	return nil
 }

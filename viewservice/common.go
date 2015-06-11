@@ -1,6 +1,7 @@
 package viewservice
 
 import "time"
+import "strconv"
 
 //
 // This is a non-replicated view service for a simple
@@ -37,6 +38,10 @@ type View struct {
 	Viewnum uint
 	Primary string //"ip:port"
 	Backup  string
+}
+
+func (v *View) String() string {
+	return "(" + strconv.Itoa(int(v.Viewnum)) + "," + v.Primary + "," + v.Backup + ")"
 }
 
 func NewView(viewnum uint, primary, backup string) *View {
