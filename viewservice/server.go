@@ -10,6 +10,13 @@ import "strconv"
 import "os"
 import "sync/atomic"
 
+//TODO
+/**
+ping部分需要重构，
+简化状态
+当primary没有ack当前currentView的viewnum之前，不允许view的change
+*/
+
 type PingServer struct {
 	addr       string
 	timeOutNum int32
@@ -28,9 +35,10 @@ func NewPingServer(addr string, timeOutNum int32) *PingServer {
 
 //viewservice 的状态
 const (
-	VS_NO_PRI          = 0
-	VS_PRIACK_WAIT     = 1
-	VS_PRIACK_RECEIVED = 2
+	VS_NO_PRI           = 0
+	VS_PRIVIEW_NOT_SEND = 1
+	VS_PRIACK_WAIT      = 2
+	VS_PRIACK_RECEIVED  = 3
 )
 
 type ViewServer struct {
@@ -97,6 +105,8 @@ func (vs *ViewServer) handleTick(addr string) {
 func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 	log.Println("==========================================================")
 	log.Println("received:" + args.Me + ", vn=" + strconv.Itoa(int(args.Viewnum)))
+	log.Println("origin currentView:" + vs.currentView.String())
+	log.Println("origin status:" + strconv.Itoa(vs.status))
 	vs.mu.Lock()
 	defer vs.mu.Unlock()
 	//handle tick
@@ -108,9 +118,14 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 		vs.currentView = NewView(vn+1, args.Me, "")
 		vs.primary = NewPingServer(args.Me, 0)
 		vs.status = VS_PRIACK_WAIT
+	} else if vs.status == VS_PRIVIEW_NOT_SEND {
+		log.Println("viewservice VS_PRIVIEW_NOT_SEND status")
+		if vs.hasPrimary(args.Me) {
+			vs.status = VS_PRIACK_WAIT
+		}
 	} else if vs.status == VS_PRIACK_WAIT {
 		log.Println("viewservice VS_PRIACK_WAIT status")
-		if vs.hasPrimary(args.Me) {
+		if vs.hasPrimary(args.Me) && args.Viewnum == vs.currentView.Viewnum {
 			vs.status = VS_PRIACK_RECEIVED
 			if vs.nextView != nil {
 				vs.currentView = vs.nextView
@@ -162,7 +177,7 @@ func (vs *ViewServer) Ping(args *PingArgs, reply *PingReply) error {
 					vs.primary = vs.backup
 					vs.backup = nil
 				}
-				vs.status = VS_PRIACK_WAIT
+				vs.status = VS_PRIVIEW_NOT_SEND
 			} else if vs.hasBackup(args.Me) {
 				log.Println("backup fail:" + vs.backup.addr + ", currentView:" + vs.currentView.String())
 				if len(vs.idleServersMap) != 0 {
@@ -226,14 +241,14 @@ func (vs *ViewServer) tick() {
 				vs.currentView = NewView(vn+1, vs.currentView.Backup, ids.addr)
 				vs.primary = vs.backup
 				vs.backup = ids
-				vs.status = VS_PRIACK_WAIT
+				vs.status = VS_PRIVIEW_NOT_SEND
 			} else {
 				//(d,1)0 -> (1,0)0
 				log.Println("(d,1)0 -> (1,0)0" + " backup:" + vs.backup.addr)
 				vs.currentView = NewView(vn+1, vs.currentView.Backup, "")
 				vs.primary = vs.backup
 				vs.backup = nil
-				vs.status = VS_PRIACK_WAIT
+				vs.status = VS_PRIVIEW_NOT_SEND
 			}
 		} else {
 			//(d,0) -> (0,0)
@@ -277,6 +292,7 @@ func (vs *ViewServer) tick() {
 // please don't change these two functions.
 //
 func (vs *ViewServer) Kill() {
+	log.Println("server killed")
 	atomic.StoreInt32(&vs.dead, 1)
 	vs.l.Close()
 }
@@ -294,6 +310,7 @@ func (vs *ViewServer) GetRPCCount() int32 {
 }
 
 func StartServer(me string) *ViewServer {
+	log.Println("server started")
 	vs := new(ViewServer)
 	vs.me = me
 	// Your vs.* initializations here.

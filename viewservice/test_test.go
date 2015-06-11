@@ -184,6 +184,7 @@ func Test1(t *testing.T) {
 		// set up p=ck3 b=ck1, but
 		// but do not ack
 		vx, _ := ck1.Get()
+		fmt.Println("vx=" + vx.String())
 		for i := 0; i < DeadPings*3; i++ {
 			ck1.Ping(0)
 			ck3.Ping(vx.Viewnum)
